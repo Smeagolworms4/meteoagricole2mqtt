@@ -226,10 +226,10 @@ function publishLocation(slug: string, locSlug: string, daily: DailyPayload, hou
 		cloud_coverage_template: '{{ value_json.cloud_coverage }}',
 		apparent_temperature_topic: `${base}/current`,
 		apparent_temperature_template: '{{ value_json.apparent_temperature }}',
-		forecast: [
-			{ type: 'daily', topic: `${base}/daily` },
-			{ type: 'hourly', topic: `${base}/hourly` },
-		],
+		daily_forecast_topic: `${base}/daily`,
+		daily_forecast_template: '{{ value_json | tojson }}',
+		hourly_forecast_topic: `${base}/hourly`,
+		hourly_forecast_template: '{{ value_json | tojson }}',
 		device,
 	}));
 

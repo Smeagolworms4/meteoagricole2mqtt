@@ -41,7 +41,31 @@ ENV HA_PREFIX=homeassistant
 
 ## Weather entity (template)
 
-Home Assistant does NOT support the `weather` platform via MQTT discovery, so this addon publishes every field as an MQTT sensor and you assemble a `weather` entity in `configuration.yaml` using the built-in `template` integration. Example for `Saint-Etienne-42000` (change the slug to match yours: `meteoagricole_<lower>_<zip>`):
+Home Assistant does **not** support the `weather` platform via MQTT discovery — only `sensor`, `binary_sensor`, `switch`, `light`, etc. So this addon publishes every field as an MQTT sensor and you assemble a `weather` entity in `configuration.yaml` using the built-in `template` integration. Three-step procedure:
+
+### 1. Find the entity IDs your addon created
+
+Once the addon is running, open **Dev Tools → States** and filter `meteoagricole_` — you'll see entities like:
+
+```
+sensor.meteoagricole_<slug>_condition            (HA condition code: sunny / rainy / …)
+sensor.meteoagricole_<slug>_temperature          (°C)
+sensor.meteoagricole_<slug>_humidity             (%)
+sensor.meteoagricole_<slug>_pressure             (hPa)
+sensor.meteoagricole_<slug>_wind_speed           (km/h)
+sensor.meteoagricole_<slug>_wind_bearing         (°)
+sensor.meteoagricole_<slug>_dew_point            (°C)
+sensor.meteoagricole_<slug>_cloud_coverage       (%)
+sensor.meteoagricole_<slug>_apparent_temperature (°C)
+sensor.meteoagricole_<slug>_forecast_daily       (state=count, attribute forecast=daily array)
+sensor.meteoagricole_<slug>_forecast_hourly      (state=count, attribute forecast=hourly array)
+```
+
+`<slug>` is the town + zip lowercased with non-alphanum replaced by `_`, e.g. `saint_etienne_42000`, `lyon_69001`, `aix_en_provence_13100`.
+
+### 2. Add this block to `configuration.yaml`
+
+Replace `saint_etienne_42000` by your actual slug:
 
 ```yaml
 template:
@@ -63,7 +87,10 @@ template:
         forecast_hourly_template: "{{ state_attr('sensor.meteoagricole_saint_etienne_42000_forecast_hourly', 'forecast') }}"
 ```
 
-Reload YAML (or restart HA) → entity `weather.meteoagricole_saint_etienne` appears and can be used by any weather card including the HACS `custom:meteofrance-weather-card`.
+### 3. Reload and use
+
+- **Dev Tools → YAML → "Template Entities"** (or restart HA) → entity `weather.meteoagricole_<town>` appears
+- Use it in any weather card (native `Weather forecast`, HACS `custom:meteofrance-weather-card`, etc.)
 
 ## For Dev
 

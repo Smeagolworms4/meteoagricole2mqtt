@@ -156,17 +156,30 @@ async function scanLocation(slug: string) {
 		return;
 	}
 
-	const hourly: HourlyForecast[] = [];
+	const hourlyRaw: HourlyForecast[] = [];
 	for (let idx = 0; idx < hourlyUrls.length; idx++) {
 		try {
 			const html = await fetchPage(hourlyUrls[idx]);
 			const base = new Date();
 			base.setDate(base.getDate() + idx);
-			hourly.push(...parseHourly(html, base));
+			hourlyRaw.push(...parseHourly(html, base));
 		} catch (e) {
 			console.error(`[${slug}] hourly j${idx + 1} fetch failed:`, e);
 		}
 	}
+
+	// Deduplicate hourly entries: the j1/j2/j3 pages overlap in time. HA forecast
+	// validation rejects duplicate datetimes, which causes the card to display
+	// nothing. Keep the FIRST occurrence (j1 wins, then j2 fills the rest, j3 the end)
+	// and finally sort chronologically.
+	const seen = new Set<string>();
+	const hourly = hourlyRaw
+		.filter((h) => {
+			if (seen.has(h.datetime)) return false;
+			seen.add(h.datetime);
+			return true;
+		})
+		.sort((a, b) => a.datetime.localeCompare(b.datetime));
 
 	publishLocation(slug, locSlug, dailyPayload, hourly);
 	console.log(

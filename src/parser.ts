@@ -243,8 +243,12 @@ export function parseDaily(html: string, now: Date = new Date()): DailyPayload {
 			djc_base10: null,
 		};
 
+		// Build the date using LOCAL components to avoid a UTC shift off-by-one
+		// when the addon runs in a TZ ahead of UTC at local midnight (toISOString()
+		// would subtract the offset and make today become yesterday).
 		const d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-		d.datetime = d0.toISOString().split('T')[0];
+		const pad = (n: number) => String(n).padStart(2, '0');
+		d.datetime = `${d0.getFullYear()}-${pad(d0.getMonth() + 1)}-${pad(d0.getDate())}`;
 
 		rows.each((rIdx, tr) => {
 			const cells = $(tr).find('th, td');

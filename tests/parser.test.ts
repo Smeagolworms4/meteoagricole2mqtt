@@ -95,7 +95,7 @@ describe('parseDaily (live)', () => {
 
 		for (const d of p.daily) {
 			expect(typeof d.datetime).toBe('string');
-			expect(d.datetime).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+			expect(d.datetime).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
 			expect([
 				'clear-night', 'cloudy', 'exceptional', 'fog', 'hail',
 				'lightning', 'lightning-rainy', 'partlycloudy', 'pouring',

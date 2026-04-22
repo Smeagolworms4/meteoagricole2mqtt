@@ -243,12 +243,15 @@ export function parseDaily(html: string, now: Date = new Date()): DailyPayload {
 			djc_base10: null,
 		};
 
-		// Build the date using LOCAL components to avoid a UTC shift off-by-one
-		// when the addon runs in a TZ ahead of UTC at local midnight (toISOString()
-		// would subtract the offset and make today become yesterday).
+		// Build a full ISO datetime for the daily forecast — HA's forecast validator
+		// rejects date-only strings (`2026-04-23`) and silently drops such items,
+		// returning an empty forecast to the weather card. We emit the UTC ISO with
+		// `T00:00:00Z` of the LOCAL date (so the off-by-one from toISOString() at
+		// local midnight is avoided by pinning the time to 00:00 UTC of the same
+		// day rather than converting a local-midnight Date).
 		const d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
 		const pad = (n: number) => String(n).padStart(2, '0');
-		d.datetime = `${d0.getFullYear()}-${pad(d0.getMonth() + 1)}-${pad(d0.getDate())}`;
+		d.datetime = `${d0.getFullYear()}-${pad(d0.getMonth() + 1)}-${pad(d0.getDate())}T00:00:00+00:00`;
 
 		rows.each((rIdx, tr) => {
 			const cells = $(tr).find('th, td');

@@ -55,8 +55,12 @@ sensor.meteoagricole_<slug>_pressure             (hPa)
 sensor.meteoagricole_<slug>_wind_speed           (km/h)
 sensor.meteoagricole_<slug>_wind_bearing         (°)
 sensor.meteoagricole_<slug>_dew_point            (°C)
-sensor.meteoagricole_<slug>_cloud_coverage       (%)
+sensor.meteoagricole_<slug>_cloud_cover          (%)   ← matches MF card auto-detect
 sensor.meteoagricole_<slug>_apparent_temperature (°C)
+sensor.meteoagricole_<slug>_uv                   ← matches MF card auto-detect
+sensor.meteoagricole_<slug>_rain_chance          (%)   ← matches MF card auto-detect
+sensor.meteoagricole_<slug>_freeze_chance        (%)   ← matches MF card auto-detect (derived)
+sensor.meteoagricole_<slug>_snow_chance          (%)   ← matches MF card auto-detect (derived)
 sensor.meteoagricole_<slug>_forecast_daily       (state=count, attribute forecast=daily array)
 sensor.meteoagricole_<slug>_forecast_hourly      (state=count, attribute forecast=hourly array)
 ```
@@ -65,32 +69,57 @@ sensor.meteoagricole_<slug>_forecast_hourly      (state=count, attribute forecas
 
 ### 2. Add this block to `configuration.yaml`
 
-Replace `saint_etienne_42000` by your actual slug:
+Replace `saint_etienne_42000` by your actual slug. **Note** : the template weather entity uses the modern HA schema (no `_template` suffix on the keys) — this is what HA 2024+ expects and is required for the forecast feeds to reach the weather card.
 
 ```yaml
 template:
   - weather:
       - name: "MétéoAgricole Saint-Etienne"
-        condition_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_condition') }}"
-        temperature_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_temperature') | float(0) }}"
+        unique_id: meteoagricole_saint_etienne_weather
+        condition: "{{ states('sensor.meteoagricole_saint_etienne_42000_condition') }}"
+        temperature: "{{ states('sensor.meteoagricole_saint_etienne_42000_temperature') | float(0) }}"
         temperature_unit: "°C"
-        humidity_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_humidity') | float(0) }}"
-        pressure_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_pressure') | float(0) }}"
+        humidity: "{{ states('sensor.meteoagricole_saint_etienne_42000_humidity') | float(0) }}"
+        pressure: "{{ states('sensor.meteoagricole_saint_etienne_42000_pressure') | float(0) }}"
         pressure_unit: "hPa"
-        wind_speed_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_wind_speed') | float(0) }}"
+        wind_speed: "{{ states('sensor.meteoagricole_saint_etienne_42000_wind_speed') | float(0) }}"
         wind_speed_unit: "km/h"
-        wind_bearing_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_wind_bearing') | float(0) }}"
-        dew_point_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_dew_point') | float(0) }}"
-        cloud_coverage_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_cloud_coverage') | float(0) }}"
-        apparent_temperature_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_apparent_temperature') | float(0) }}"
-        forecast_daily_template: "{{ state_attr('sensor.meteoagricole_saint_etienne_42000_forecast_daily', 'forecast') }}"
-        forecast_hourly_template: "{{ state_attr('sensor.meteoagricole_saint_etienne_42000_forecast_hourly', 'forecast') }}"
+        wind_bearing: "{{ states('sensor.meteoagricole_saint_etienne_42000_wind_bearing') | float(0) }}"
+        wind_gust_speed: "{{ states('sensor.meteoagricole_saint_etienne_42000_wind_gust_speed') | float(0) }}"
+        dew_point: "{{ states('sensor.meteoagricole_saint_etienne_42000_dew_point') | float(0) }}"
+        cloud_coverage: "{{ states('sensor.meteoagricole_saint_etienne_42000_cloud_cover') | float(0) }}"
+        apparent_temperature: "{{ states('sensor.meteoagricole_saint_etienne_42000_apparent_temperature') | float(0) }}"
+        uv_index: "{{ states('sensor.meteoagricole_saint_etienne_42000_uv') | float(0) }}"
+        forecast_daily: "{{ state_attr('sensor.meteoagricole_saint_etienne_42000_forecast_daily', 'forecast') }}"
+        forecast_hourly: "{{ state_attr('sensor.meteoagricole_saint_etienne_42000_forecast_hourly', 'forecast') }}"
 ```
 
 ### 3. Reload and use
 
 - **Dev Tools → YAML → "Template Entities"** (or restart HA) → entity `weather.meteoagricole_<town>` appears
 - Use it in any weather card (native `Weather forecast`, HACS `custom:meteofrance-weather-card`, etc.)
+
+### 4. Configuring the HACS `custom:meteofrance-weather-card`
+
+The card auto-detects companion sensors whose entity_ids share the same prefix as your weather entity. Since the template weather's prefix is different from the MQTT sensor prefix, you need to declare the 3 bridging entities explicitly:
+
+```yaml
+type: custom:meteofrance-weather-card
+entity: weather.meteoagricole_saint_etienne
+current: true
+details: true
+daily_forecast: true
+hourly_forecast: true
+number_of_daily_forecasts: 5
+number_of_hourly_forecasts: 12
+cloudCoverEntity: sensor.meteoagricole_saint_etienne_42000_cloud_cover
+uvEntity: sensor.meteoagricole_saint_etienne_42000_uv
+rainChanceEntity: sensor.meteoagricole_saint_etienne_42000_rain_chance
+freezeChanceEntity: sensor.meteoagricole_saint_etienne_42000_freeze_chance
+snowChanceEntity: sensor.meteoagricole_saint_etienne_42000_snow_chance
+```
+
+`one_hour_forecast` and `alert_forecast` need the native Météo-France integration's extras (minute-level rain, typed vigilance) that lameteoagricole does not expose — keep them off.
 
 ## For Dev
 

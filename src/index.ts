@@ -206,11 +206,20 @@ function publishLocation(slug: string, locSlug: string, daily: DailyPayload, hou
 	// Clear any previously published broken config (retained) so HA forgets the entity.
 	publish(`${haPrefix}/weather/meteoagricole/${locSlug}/config`, '');
 
+	// Legacy slug keys cleanup (renamed to match meteofrance-weather-card convention).
+	// Publishing an empty retained payload removes the old entity from HA's registry.
+	const LEGACY_SLUGS = ['cloud_coverage', 'uv_index', 'precipitation_probability_today'];
+	for (const legacy of LEGACY_SLUGS) {
+		publish(`${haPrefix}/sensor/meteoagricole/${locSlug}_${legacy}/config`, '');
+	}
+
+	// Modern HA MQTT discovery uses `default_entity_id` (since 2025+) to suggest the
+	// entity_id — `object_id` in the payload is deprecated.
 	const addSensor = (slugKey: string, name: string, valueTemplate: string, topic: string, opts: Record<string, any> = {}) => {
 		publish(`${haPrefix}/sensor/meteoagricole/${locSlug}_${slugKey}/config`, JSON.stringify({
 			name,
 			unique_id: `meteoagricole_${locSlug}_${slugKey}`,
-			object_id: `meteoagricole_${locSlug}_${slugKey}`,
+			default_entity_id: `sensor.meteoagricole_${locSlug}_${slugKey}`,
 			state_topic: topic,
 			value_template: valueTemplate,
 			device,
@@ -222,7 +231,7 @@ function publishLocation(slug: string, locSlug: string, daily: DailyPayload, hou
 		publish(`${haPrefix}/binary_sensor/meteoagricole/${locSlug}_${slugKey}/config`, JSON.stringify({
 			name,
 			unique_id: `meteoagricole_${locSlug}_${slugKey}`,
-			object_id: `meteoagricole_${locSlug}_${slugKey}`,
+			default_entity_id: `binary_sensor.meteoagricole_${locSlug}_${slugKey}`,
 			state_topic: topic,
 			value_template: valueTemplate,
 			payload_on: 'true',
@@ -248,7 +257,7 @@ function publishLocation(slug: string, locSlug: string, daily: DailyPayload, hou
 	publish(`${haPrefix}/sensor/meteoagricole/${locSlug}_forecast_daily/config`, JSON.stringify({
 		name: 'Forecast daily',
 		unique_id: `meteoagricole_${locSlug}_forecast_daily`,
-		object_id: `meteoagricole_${locSlug}_forecast_daily`,
+		default_entity_id: `sensor.meteoagricole_${locSlug}_forecast_daily`,
 		state_topic: fdT,
 		value_template: '{{ value_json.count }}',
 		json_attributes_topic: fdT,
@@ -259,7 +268,7 @@ function publishLocation(slug: string, locSlug: string, daily: DailyPayload, hou
 	publish(`${haPrefix}/sensor/meteoagricole/${locSlug}_forecast_hourly/config`, JSON.stringify({
 		name: 'Forecast hourly',
 		unique_id: `meteoagricole_${locSlug}_forecast_hourly`,
-		object_id: `meteoagricole_${locSlug}_forecast_hourly`,
+		default_entity_id: `sensor.meteoagricole_${locSlug}_forecast_hourly`,
 		state_topic: fhT,
 		value_template: '{{ value_json.count }}',
 		json_attributes_topic: fhT,
@@ -292,13 +301,16 @@ function publishLocation(slug: string, locSlug: string, daily: DailyPayload, hou
 	addSensor('wind_bearing', 'Direction du vent', '{{ value_json.wind_bearing }}', curT, {
 		unit_of_measurement: '°', icon: 'mdi:compass',
 	});
-	addSensor('cloud_coverage', 'Nébulosité', '{{ value_json.cloud_coverage }}', curT, {
+	// Slug aligned with meteofrance-weather-card auto-detection (`_cloud_cover`)
+	addSensor('cloud_cover', 'Nébulosité', '{{ value_json.cloud_coverage }}', curT, {
 		unit_of_measurement: '%', icon: 'mdi:weather-cloudy', state_class: 'measurement',
 	});
-	addSensor('condition_text', 'Condition', '{{ value_json.conditionText }}', curT, { icon: 'mdi:weather-partly-cloudy' });
+	// Renamed from "Condition" → avoids collision with the HA-code condition sensor above
+	addSensor('condition_text', 'Observation', '{{ value_json.conditionText }}', curT, { icon: 'mdi:weather-partly-cloudy' });
 	addSensor('observed_at', 'Dernière observation', '{{ value_json.observedAt }}', curT, { icon: 'mdi:clock-outline' });
 
-	addSensor('uv_index', 'Indice UV', '{{ value_json[0].uv_index }}', dT, { icon: 'mdi:weather-sunny-alert', state_class: 'measurement' });
+	// Slug aligned with meteofrance-weather-card (`_uv`)
+	addSensor('uv', 'Indice UV', '{{ value_json[0].uv_index }}', dT, { icon: 'mdi:weather-sunny-alert', state_class: 'measurement' });
 	addSensor('air_quality', 'Qualité air', '{{ value_json[0].air_quality }}', dT, { icon: 'mdi:air-filter' });
 	addSensor('sunshine_hours', 'Ensoleillement', '{{ value_json[0].sunshine_hours | round(1) if value_json[0].sunshine_hours else None }}', dT, {
 		unit_of_measurement: 'h', icon: 'mdi:weather-sunny',
@@ -308,9 +320,27 @@ function publishLocation(slug: string, locSlug: string, daily: DailyPayload, hou
 	addSensor('precipitation_today', 'Précipitations J', '{{ value_json[0].precipitation }}', dT, {
 		device_class: 'precipitation', unit_of_measurement: 'mm', state_class: 'total',
 	});
-	addSensor('precipitation_probability_today', 'Probabilité pluie J', '{{ value_json[0].precipitation_probability }}', dT, {
+	// Slug aligned with meteofrance-weather-card (`_rain_chance`)
+	addSensor('rain_chance', 'Probabilité pluie J', '{{ value_json[0].precipitation_probability }}', dT, {
 		unit_of_measurement: '%', icon: 'mdi:weather-pouring',
 	});
+	// Derived: freeze chance for today (cold + rainy days)
+	addSensor('freeze_chance', 'Probabilité gel J',
+		'{% set d = value_json[0] %}' +
+		'{% set tmin = d.templow | float(99) %}' +
+		'{% set pp = d.precipitation_probability | float(0) %}' +
+		'{% if tmin <= 0 %}100{% elif tmin <= 2 and pp >= 30 %}50{% elif tmin <= 3 %}20{% else %}0{% endif %}',
+		dT, { unit_of_measurement: '%', icon: 'mdi:snowflake-thermometer' });
+	// Derived: snow chance for today (based on condition or cold+precip)
+	addSensor('snow_chance', 'Probabilité neige J',
+		'{% set d = value_json[0] %}' +
+		'{% set c = d.condition %}' +
+		'{% set txt = d.conditionText | lower %}' +
+		'{% set tmin = d.templow | float(99) %}' +
+		'{% if c in ["snowy","snowy-rainy","hail"] or "neige" in txt or "flocon" in txt %}100' +
+		'{% elif tmin <= 1 and (d.precipitation | float(0)) > 0 %}40' +
+		'{% else %}0{% endif %}',
+		dT, { unit_of_measurement: '%', icon: 'mdi:weather-snowy' });
 	addSensor('temperature_max_today', 'Température maxi J', '{{ value_json[0].temperature }}', dT, {
 		device_class: 'temperature', unit_of_measurement: '°C',
 	});

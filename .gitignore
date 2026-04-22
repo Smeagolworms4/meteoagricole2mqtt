@@ -1,0 +1,5 @@
+node_modules
+dist
+.env.local
+docker/.makefiles
+docker/.history_meteoagricole2mqtt

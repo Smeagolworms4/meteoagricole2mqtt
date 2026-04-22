@@ -5,7 +5,7 @@
 [!["Buy Me A Coffee"](https://raw.githubusercontent.com/Smeagolworms4/donate-assets/master/coffee.png)](https://www.buymeacoffee.com/smeagolworms4)
 [!["Buy Me A Coffee"](https://raw.githubusercontent.com/Smeagolworms4/donate-assets/master/paypal.png)](https://www.paypal.com/donate/?business=SURRPGEXF4YVU&no_recurring=0&item_name=Hello%2C+I%27m+SmeagolWorms4.+For+my+open+source+projects.%0AThanks+you+very+mutch+%21%21%21&currency_code=EUR)
 
-Scrape [lameteoagricole.net](https://www.lameteoagricole.net/) and publish the data to MQTT with Home Assistant auto-discovery (weather entity + agri sensors).
+Scrape [lameteoagricole.net](https://www.lameteoagricole.net/) and publish one sensor per field to MQTT with Home Assistant auto-discovery. A companion `weather` entity can then be assembled via the built-in `template` integration — see the [Weather entity](#weather-entity-template) section below.
 
 ## Usage
 
@@ -101,7 +101,7 @@ template:
 
 ### 4. Configuring the HACS `custom:meteofrance-weather-card`
 
-The card auto-detects companion sensors whose entity_ids share the same prefix as your weather entity. Since the template weather's prefix is different from the MQTT sensor prefix, you need to declare the 3 bridging entities explicitly:
+The card auto-detects companion sensors whose entity_ids share the same prefix as your weather entity. Since the template weather's prefix is different from the MQTT sensor prefix, you need to declare the bridging entities explicitly:
 
 ```yaml
 type: custom:meteofrance-weather-card

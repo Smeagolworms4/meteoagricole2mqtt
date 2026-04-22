@@ -196,42 +196,15 @@ function publishLocation(slug: string, locSlug: string, daily: DailyPayload, hou
 	publish(`${base}/hourly`, JSON.stringify(hourly));
 	publish(`${base}/sun_moon`, JSON.stringify(daily.sunMoon));
 	publish(`${base}/alert`, JSON.stringify(daily.alert));
+	// Wrapped payloads for json_attributes_topic (MQTT sensors need a JSON object, not a bare array)
+	publish(`${base}/forecast_daily`, JSON.stringify({ count: daily.daily.length, forecast: daily.daily }));
+	publish(`${base}/forecast_hourly`, JSON.stringify({ count: hourly.length, forecast: hourly }));
 
 	if (!haDiscovery) return;
 
-	const weatherUid = `meteoagricole_${locSlug}_weather`;
-	publish(`${haPrefix}/weather/meteoagricole/${locSlug}/config`, JSON.stringify({
-		name: daily.locationName || slug,
-		unique_id: weatherUid,
-		object_id: `meteoagricole_${locSlug}`,
-		state_topic: `${base}/current`,
-		value_template: '{{ value_json.condition }}',
-		temperature_topic: `${base}/current`,
-		temperature_template: '{{ value_json.temperature }}',
-		temperature_unit: 'C',
-		humidity_topic: `${base}/current`,
-		humidity_template: '{{ value_json.humidity }}',
-		pressure_topic: `${base}/current`,
-		pressure_template: '{{ value_json.pressure }}',
-		pressure_unit: 'hPa',
-		wind_speed_topic: `${base}/current`,
-		wind_speed_template: '{{ value_json.wind_speed }}',
-		wind_speed_unit: 'km/h',
-		wind_bearing_topic: `${base}/current`,
-		wind_bearing_template: '{{ value_json.wind_bearing }}',
-		dew_point_topic: `${base}/current`,
-		dew_point_template: '{{ value_json.dew_point }}',
-		dew_point_unit: 'C',
-		cloud_coverage_topic: `${base}/current`,
-		cloud_coverage_template: '{{ value_json.cloud_coverage }}',
-		apparent_temperature_topic: `${base}/current`,
-		apparent_temperature_template: '{{ value_json.apparent_temperature }}',
-		daily_forecast_topic: `${base}/daily`,
-		daily_forecast_template: '{{ value_json | tojson }}',
-		hourly_forecast_topic: `${base}/hourly`,
-		hourly_forecast_template: '{{ value_json | tojson }}',
-		device,
-	}));
+	// HA MQTT integration does NOT support the `weather` platform via discovery.
+	// Clear any previously published broken config (retained) so HA forgets the entity.
+	publish(`${haPrefix}/weather/meteoagricole/${locSlug}/config`, '');
 
 	const addSensor = (slugKey: string, name: string, valueTemplate: string, topic: string, opts: Record<string, any> = {}) => {
 		publish(`${haPrefix}/sensor/meteoagricole/${locSlug}_${slugKey}/config`, JSON.stringify({
@@ -263,6 +236,37 @@ function publishLocation(slug: string, locSlug: string, daily: DailyPayload, hou
 	const dT = `${base}/daily`;
 	const smT = `${base}/sun_moon`;
 	const alT = `${base}/alert`;
+	const fdT = `${base}/forecast_daily`;
+	const fhT = `${base}/forecast_hourly`;
+
+	// Condition code (HA-standard) — used as state of a template weather entity
+	addSensor('condition', 'Condition', '{{ value_json.condition }}', curT, { icon: 'mdi:weather-partly-cloudy' });
+
+	// Forecast arrays exposed as attribute `forecast` of a sensor (HA requires a JSON object
+	// on json_attributes_topic, so we wrap the arrays). The template `weather:` entity in
+	// configuration.yaml reads them via `state_attr('sensor.xxx_forecast_daily', 'forecast')`.
+	publish(`${haPrefix}/sensor/meteoagricole/${locSlug}_forecast_daily/config`, JSON.stringify({
+		name: 'Forecast daily',
+		unique_id: `meteoagricole_${locSlug}_forecast_daily`,
+		object_id: `meteoagricole_${locSlug}_forecast_daily`,
+		state_topic: fdT,
+		value_template: '{{ value_json.count }}',
+		json_attributes_topic: fdT,
+		unit_of_measurement: 'd',
+		icon: 'mdi:calendar-week',
+		device,
+	}));
+	publish(`${haPrefix}/sensor/meteoagricole/${locSlug}_forecast_hourly/config`, JSON.stringify({
+		name: 'Forecast hourly',
+		unique_id: `meteoagricole_${locSlug}_forecast_hourly`,
+		object_id: `meteoagricole_${locSlug}_forecast_hourly`,
+		state_topic: fhT,
+		value_template: '{{ value_json.count }}',
+		json_attributes_topic: fhT,
+		unit_of_measurement: 'h',
+		icon: 'mdi:clock-outline',
+		device,
+	}));
 
 	addSensor('temperature', 'Température', '{{ value_json.temperature }}', curT, {
 		device_class: 'temperature', unit_of_measurement: '°C', state_class: 'measurement',

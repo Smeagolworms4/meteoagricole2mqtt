@@ -39,6 +39,32 @@ ENV HA_DISCOVERY=1
 ENV HA_PREFIX=homeassistant
 ```
 
+## Weather entity (template)
+
+Home Assistant does NOT support the `weather` platform via MQTT discovery, so this addon publishes every field as an MQTT sensor and you assemble a `weather` entity in `configuration.yaml` using the built-in `template` integration. Example for `Saint-Etienne-42000` (change the slug to match yours: `meteoagricole_<lower>_<zip>`):
+
+```yaml
+template:
+  - weather:
+      - name: "MétéoAgricole Saint-Etienne"
+        condition_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_condition') }}"
+        temperature_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_temperature') | float(0) }}"
+        temperature_unit: "°C"
+        humidity_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_humidity') | float(0) }}"
+        pressure_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_pressure') | float(0) }}"
+        pressure_unit: "hPa"
+        wind_speed_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_wind_speed') | float(0) }}"
+        wind_speed_unit: "km/h"
+        wind_bearing_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_wind_bearing') | float(0) }}"
+        dew_point_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_dew_point') | float(0) }}"
+        cloud_coverage_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_cloud_coverage') | float(0) }}"
+        apparent_temperature_template: "{{ states('sensor.meteoagricole_saint_etienne_42000_apparent_temperature') | float(0) }}"
+        forecast_daily_template: "{{ state_attr('sensor.meteoagricole_saint_etienne_42000_forecast_daily', 'forecast') }}"
+        forecast_hourly_template: "{{ state_attr('sensor.meteoagricole_saint_etienne_42000_forecast_hourly', 'forecast') }}"
+```
+
+Reload YAML (or restart HA) → entity `weather.meteoagricole_saint_etienne` appears and can be used by any weather card including the HACS `custom:meteofrance-weather-card`.
+
 ## For Dev
 
 Start container

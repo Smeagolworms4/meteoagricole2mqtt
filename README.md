@@ -69,13 +69,15 @@ sensor.meteoagricole_<slug>_forecast_hourly      (state=count, attribute forecas
 
 ### 2. Add this block to `configuration.yaml`
 
-Replace `saint_etienne_42000` by your actual slug. **Note** : the template weather entity uses the modern HA schema (no `_template` suffix on the keys) — this is what HA 2024+ expects and is required for the forecast feeds to reach the weather card.
+Replace `saint_etienne_42000` by your actual slug. **Important** : the `name:` is chosen so the resulting entity_id `weather.meteoagricole_<slug>` shares its prefix with the MQTT sensors — this lets the `meteofrance-weather-card` auto-detect all companion entities without explicit mapping.
+
+The template weather entity uses the modern HA schema (no `_template` suffix on the keys) — this is what HA 2024+ expects and is required for the forecast feeds to reach the weather card.
 
 ```yaml
 template:
   - weather:
-      - name: "MétéoAgricole Saint-Etienne"
-        unique_id: meteoagricole_saint_etienne_weather
+      - name: "MétéoAgricole Saint-Etienne 42000"
+        unique_id: meteoagricole_saint_etienne_42000_weather
         condition: "{{ states('sensor.meteoagricole_saint_etienne_42000_condition') }}"
         temperature: "{{ states('sensor.meteoagricole_saint_etienne_42000_temperature') | float(0) }}"
         temperature_unit: "°C"
@@ -101,22 +103,17 @@ template:
 
 ### 4. Configuring the HACS `custom:meteofrance-weather-card`
 
-The card auto-detects companion sensors whose entity_ids share the same prefix as your weather entity. Since the template weather's prefix is different from the MQTT sensor prefix, you need to declare the bridging entities explicitly:
+Because the template entity is named so its prefix matches the MQTT sensors, the card auto-detects every companion entity (cloud_cover, uv, rain_chance, freeze_chance, snow_chance) by itself — no explicit mapping needed:
 
 ```yaml
 type: custom:meteofrance-weather-card
-entity: weather.meteoagricole_saint_etienne
+entity: weather.meteoagricole_saint_etienne_42000
 current: true
 details: true
 daily_forecast: true
 hourly_forecast: true
 number_of_daily_forecasts: 5
 number_of_hourly_forecasts: 12
-cloudCoverEntity: sensor.meteoagricole_saint_etienne_42000_cloud_cover
-uvEntity: sensor.meteoagricole_saint_etienne_42000_uv
-rainChanceEntity: sensor.meteoagricole_saint_etienne_42000_rain_chance
-freezeChanceEntity: sensor.meteoagricole_saint_etienne_42000_freeze_chance
-snowChanceEntity: sensor.meteoagricole_saint_etienne_42000_snow_chance
 ```
 
 `one_hour_forecast` and `alert_forecast` need the native Météo-France integration's extras (minute-level rain, typed vigilance) that lameteoagricole does not expose — keep them off.

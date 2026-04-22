@@ -61,8 +61,8 @@ sensor.meteoagricole_<slug>_uv                   ← matches MF card auto-detect
 sensor.meteoagricole_<slug>_rain_chance          (%)   ← matches MF card auto-detect
 sensor.meteoagricole_<slug>_freeze_chance        (%)   ← matches MF card auto-detect (derived)
 sensor.meteoagricole_<slug>_snow_chance          (%)   ← matches MF card auto-detect (derived)
-sensor.meteoagricole_<slug>_forecast_daily       (state=count, attribute forecast=daily array)
-sensor.meteoagricole_<slug>_forecast_hourly      (state=count, attribute forecast=hourly array)
+sensor.meteoagricole_<slug>_forecast_daily       (state=count, attr `forecast`=HA-standard array, attr `forecast_full`=with agri extras)
+sensor.meteoagricole_<slug>_forecast_hourly      (state=count, attr `forecast`=HA-standard array, attr `forecast_full`=with agri extras)
 ```
 
 `<slug>` is the town + zip lowercased with non-alphanum replaced by `_`, e.g. `saint_etienne_42000`, `lyon_69001`, `aix_en_provence_13100`.

@@ -209,9 +209,50 @@ function publishLocation(slug: string, locSlug: string, daily: DailyPayload, hou
 	publish(`${base}/hourly`, JSON.stringify(hourly));
 	publish(`${base}/sun_moon`, JSON.stringify(daily.sunMoon));
 	publish(`${base}/alert`, JSON.stringify(daily.alert));
-	// Wrapped payloads for json_attributes_topic (MQTT sensors need a JSON object, not a bare array)
-	publish(`${base}/forecast_daily`, JSON.stringify({ count: daily.daily.length, forecast: daily.daily }));
-	publish(`${base}/forecast_hourly`, JSON.stringify({ count: hourly.length, forecast: hourly }));
+	// Wrapped payloads for json_attributes_topic. `forecast` keeps only HA-standard
+	// fields so it can be piped directly into a `template: weather` entity's
+	// `forecast_daily:` — HA's forecast validator is allergic to the extra agri
+	// fields (djc_*, conditionText, sunshine_hours, etc.) and would silently
+	// return an empty list otherwise. `forecast_full` keeps everything for
+	// charts / automations / templates that need the agri data.
+	const standardDaily = daily.daily.map((d) => ({
+		datetime: d.datetime,
+		condition: d.condition,
+		temperature: d.temperature,
+		templow: d.templow,
+		precipitation: d.precipitation,
+		precipitation_probability: d.precipitation_probability,
+		wind_speed: d.wind_speed,
+		wind_gust_speed: d.wind_gust_speed,
+		wind_bearing: d.wind_bearing,
+		humidity: d.humidity,
+		cloud_coverage: d.cloud_coverage,
+		uv_index: d.uv_index,
+		pressure: d.pressure,
+	}));
+	const standardHourly = hourly.map((h) => ({
+		datetime: h.datetime,
+		condition: h.condition,
+		temperature: h.temperature,
+		apparent_temperature: h.apparent_temperature,
+		precipitation: h.precipitation,
+		precipitation_probability: h.precipitation_probability,
+		wind_speed: h.wind_speed,
+		wind_gust_speed: h.wind_gust_speed,
+		wind_bearing: h.wind_bearing,
+		humidity: h.humidity,
+		cloud_coverage: h.cloud_coverage,
+	}));
+	publish(`${base}/forecast_daily`, JSON.stringify({
+		count: standardDaily.length,
+		forecast: standardDaily,
+		forecast_full: daily.daily,
+	}));
+	publish(`${base}/forecast_hourly`, JSON.stringify({
+		count: standardHourly.length,
+		forecast: standardHourly,
+		forecast_full: hourly,
+	}));
 
 	if (!haDiscovery) return;
 

@@ -264,7 +264,7 @@ export function parseDaily(html: string, now: Date = new Date()): DailyPayload {
 					const condText = cell.find('img[src*="/Weather/numbers/"]').first().attr('alt')
 						|| cell.find('.forModal').first().text().trim();
 					d.conditionText = condText || '';
-					d.temperature = numOrNull(cell.find('.fw-bold.fs-4.text-warning').first().text());
+					d.temperature = numOrNull(cell.find('.fw-bold.fs-4').first().text());
 					const minMatch = txt.match(/min\s*(-?\d+)\s*°/);
 					if (minMatch) d.templow = parseFloat(minMatch[1]);
 					const ecartTxt = cell.find('.text-invalid .fw-bold').first().text().trim();
@@ -380,7 +380,7 @@ export function parseHourly(html: string, baseDate: Date = new Date()): HourlyFo
 
 		const condText = cell.find('img[src*="/Weather/numbers/"]').first().attr('alt')
 			|| cell.find('.forModal').first().text().trim();
-		const temp = numOrNull(cell.find('.fw-bold.fs-4.text-warning').first().text());
+		const temp = numOrNull(cell.find('.fw-bold.fs-4').first().text());
 		const ressentiMatch = cTxt.match(/ressentie\s*(-?\d+)\s*°/i);
 		const precipMatch = cTxt.match(/Précipitations\s*:\s*([\d.,]+(?:\s*à\s*[\d.,]+)?)\s*mm/);
 		const probaMatch = cTxt.match(/Probabilité\s*:\s*(\d+)\s*%/);
